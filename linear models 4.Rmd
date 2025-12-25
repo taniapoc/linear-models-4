@@ -1,6 +1,6 @@
 ---
-title: "STAT350 - Assignment 4"
-author: "Tania Pocrnjic - 301454924"
+title: "Linear Models 4"
+author: "Tania Pocrnjic"
 date: "`r Sys.Date()`"
 output: html_document
 ---
