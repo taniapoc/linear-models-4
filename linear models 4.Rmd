@@ -1,0 +1,193 @@
+---
+title: "STAT350 - Assignment 4"
+author: "Tania Pocrnjic - 301454924"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(car)
+library(ggplot2)
+```
+
+# Question 1. 
+## a) 
+In order to diagnose multicollinearity, I first fitted a multiple linear regression for the data, and computed the variance inflation factor (VIF) for each var. 
+``` {r}
+concrete = read.table("concrete.txt",header=TRUE)
+model1 = lm(CompressiveStrength ~ Cement+Slag+FlyAsh+Water+SP+CoarseAggr+FineAggr, data=concrete)
+vif(model1)
+```
+Based on the results above, all predictors except for SP have VIF > 10, therefore the following 6 predictors exhibit severe multicollinearity: cement, slag, fly ash, water, coarse aggregates, and fine aggregates. <br>
+
+## b) 
+Three ways that multicollinearity can cause problems are: <br> 
+1. The standard errors for each predictor blow up <br> 
+2. The regression coefficients are very sensitive to small changes in the predictors (not robust) <br> 
+3. The power of the model is decreased (more probability of a type 2 error) <br> 
+<br> 
+
+## c) 
+In general, I would be very cautious about removing variables. <br> 
+Multicollinearity can come from different variables being highly correlated with each other, so I decided to look at the correlation matrix, and pick out which variables have the highest correlations with others to consider removing them. <br> 
+``` {r}
+cor(concrete)
+```
+After looking at the correlation matrix, I found that CoarseAggr has the single highest correlation to another variable (r = -0.6 for CoarseAggr and Water), and it is also moderately correlated to FineAggr, so I would consider removing it. <br> 
+
+After removing CoarseAggr, the new VIFs are shown below: <br> 
+```{r}
+model2 = lm(CompressiveStrength ~ Cement+Slag+FlyAsh+Water+SP+FineAggr, data=concrete)
+vif(model2)
+```
+Now the VIFs no longer suggest that we have problems with multicollinearity. <br> 
+
+\newpage
+
+# Question 2. 
+## a) 
+The model is: 
+$Y_i = \beta_0 + \beta_1x_i + \beta_2x_i^2 + \epsilon_i$, where $\epsilon_i \sim iidN(0,\sigma^2)$
+
+## b) 
+No, because a 1 unit increase in standardized BMI would not only present itself in the $\beta_1$ term, but also in the $\beta_2$ term,so the expected change would be $Y(x+1)-Y(x) = \beta_0 + \beta_1(x+1) + \beta_2(x+1)^2 - (\beta_0 + \beta_1x + \beta_2x^2)$, which actually simplifies to $\beta_1 + 2\beta_1x + \beta_2$. <br> 
+
+## c) 
+Below is the code for the linear model specified in part (a), and the output table of summary statistics. 
+``` {r}
+depression = read.table("depression.txt", header=TRUE)
+model = lm(Depression ~ BMI + I(BMI^2), data=depression)
+summary(model)
+```
+
+## d) 
+The $R^2$ value is 0.0365. This means that the linear model only accounts for 3.65% of the total sample variance. 
+
+## e) 
+``` {r}
+ggplot(depression, aes(x=BMI, y=Depression)) + geom_point() + 
+  stat_function(fun=function(x) 0.655284 + .004677*x + .013647*x^2) 
+```
+
+## f) 
+### i.
+$H_0: \beta_2 = 0$ <br> 
+$H_A: \beta_2 > 0$ <br>
+
+### ii. 
+The value of the test statistic is: <br> 
+$F = \frac{SS(BMI^2|BMI)/df(BMI^2)}{MSR} = \frac{0.54354/1}{0.01002} = 54.26$ <br>
+
+``` {r}
+anova(model)
+```
+
+### iii. 
+The p-value of F=54.26 = 2.815e-13
+
+### iv. 
+Since p(F=54.26) < $\alpha = 0.01$, we reject the null hypothesis. Based on our data, we have evidence to support the hypothesis that depression is more serious in children who are underweight or overweight. 
+
+\newpage
+
+# Question 3. 
+## a) 
+Let $Y_i$ be the price of the i-th diamond <br>
+Let $x_{1i}$ be the weight of the i-th diamond <br> 
+Let $x_{2i} = 1$ if the colour of the ith diamond is I, and 0 if it is H <br> 
+The model is: <br> 
+$Y_i = \beta_0 + \beta_1x_{1i} + \beta_2x_{2i} + \beta_3x_{1i}x_{2i} + \epsilon_i$, where $\epsilon_i \sim N(0,\sigma^2)$ and $\epsilon_i$ are independent. 
+
+## b) 
+The main effect of weight in my model is $\beta_1$, which can be interpreted as the expected change in price of a diamond for a 1 carat increase in weight. 
+
+## c) 
+Shown below is the table of output estimates of the intercept ($\beta_0$), the slope ($\beta_1$) labelled Weight, the effect of colour ($\beta_2$) labelled ColourI, and the interaction term ($\beta_3$) labelled Weight:Colour, with their respective standard errors. 
+
+``` {r}
+diamond = read.table("diamond-red.txt",header=TRUE)
+model = with(diamond, lm(Price ~ Weight*Colour))
+summary(model)
+```
+
+## d) 
+Below is the plot of price vs weight of diamonds, with the regression lines superimposed. The black dots and black line correspond to Colour = H, and the red dots and red line correspond to Colour = I. <br> 
+```{r}
+plot(x=diamond$Weight,y=diamond$Price,col=factor(diamond$Colour), xlab = "weight of diamond (carats)", ylab = "price", main = "Price of diamond vs Weight (carats), by Colour")
+abline(a=-3824.4-831.7,b=12595.9+190.1,col="red")
+abline(a=-3824.4,b=12595.9,col="black")
+```
+
+## e) 
+### i. 
+In the model specified in part (a), the parameters $\beta_2$ and $\beta_3$ both multiply $x_{2i}$, which is the variable related to colour. If colour has no effect on price, we would have our null hypothesis defined such that both $\beta_2, \beta_3 = 0$
+$H_0: \beta_2 = 0, \beta_3 = 0$ <br> 
+$H_A:$ at least 1 of $\beta_2, \beta_3 \neq 0$ <br> 
+
+### ii.
+To compute the value of the test statistic, I used the R code shown below. <br> 
+The value of the test statistic is 17.059. <br> 
+```{r}
+fit_0 = lm(Price ~ Colour + Weight + Colour:Weight, data = diamond)
+fit_a = lm(Price ~ Weight, data = diamond)
+anova(fit_a, fit_0)
+```
+
+### iii. 
+Under the null hypothesis, the test statistic is a draw from an $F_{70,2}$ distribution. <br> 
+
+### iv. 
+The p value of the test statistic is also available in the table in part (ii). It is 9.224e-07.<br> 
+
+### v. 
+Since p(F = 17.059) < $\alpha = 0.05$, we reject the null hypothesis. Our data supports the claim that the overall effect of Colour is significant on the price of the diamonds at the 5% level. <br> 
+
+## f) 
+The estimated mean price of a 1-carat diamond of colour I is given by: <br> 
+$Y_i = \beta_0 + \beta_1x_{1i} + \beta_2x_{2i} + \beta_3x_{1i}x_{2i}$ <br>
+$Y = \beta_0 + \beta_1(1) + \beta_2(1) + \beta_3(1)(1)$ <br>
+$Y = -3824.4 + 12595.9 + -831.7 + 190.1$ <br>
+$Y = 8129.9$ <br> 
+Therefore, the estimated mean price of a 1-carat diamond with Colour I is $8129.90 <br> 
+
+## g)
+The overall effect of colour (disregarding any interactions) is significant at the 5% level, but the main effect and the interaction effect of colour and weight are not (see table in part c). This could be caused by the fact that the effect of colour on price is not consistent for all weights in the observed range. For the overall effect, we see that the red dots in part (d) are generally lower than the black dots, allowing us to reject the null hypothesis that colour has no effect. However, looking at the scatterplot more closely, we can see that sometimes the red dots are closer to the black dots (especially towards the leftmost and rightmost edges), suggesting that the effect of colour on price is less extreme in certain areas. Therefore, taking the interaction into account, we might not be able to conclude that colour has a specific effect on price (as seen by the high p values). 
+
+\newpage
+
+# Question 4. 
+## a) 
+Let $x_{1i} = 1$ if the i-th pepper is a chipotle, and 0 otherwise. <br> 
+Let $x_{2i} = 1$ if the i-th pepper is a jalapeno, and 0 otherwise. <br> 
+Let $x_{2i} = 1$ if the i-th pepper is a serrano, and 0 otherwise. <br> 
+Let $Y_i$ be the spiciness of the i-th pepper. <br> 
+$Y_i = \beta_0 + \beta_1x_{1i} + \beta_2x_{2i} + \beta_3x_{3i} + \epsilon_i$, where $\epsilon_i \sim N(0, \sigma^2)$, and $\epsilon_i$ are independent. <br> 
+
+## b) 
+We use the table output below to find the estimated mean spiciness of a serrano pepper: <br> 
+```{r}
+pepper = read.table("pepper.txt", header = TRUE)
+pepper = pepper %>% mutate(Type = factor(Type))
+fit = lm(Spiciness~Type, data=pepper)
+summary(fit)
+```
+$Y(serrano) = \beta_0 + \beta_1x_{1i} + \beta_2x_{2i} + \beta_3x_{3i}$ <br>
+$Y(serrano) = \beta_0 + \beta_1(0) + \beta_2(0) + \beta_3(1)$ <br>
+$Y(serrano) = 2246.5 + 6161.9(0) + 7464.0(0) + 20874.2(1)$ <br>
+$Y(serrano) = 23120.7$ <br> 
+
+Therefore the estimated mean spiciness of serrano peppers is 23120.7 SHU
+
+## c) 
+To check if spiciness varies by type, we can use an F test. <br> 
+<br> 
+$H_0: \beta_1 = \beta_2 = \beta_3 = 0$ <br> 
+$H_A:$ at least one of $\beta_1, \beta_2, \beta_3 \neq 0$ <br> 
+<br> 
+The test statistic is a draw from an F distribution with 3 and 40 df. <br> 
+The value of the test statistic is F = 187.6 <br> 
+The p value of the test statistic < 2.2e-16 <br> 
+Since P(F=187.6) < $\alpha = 0.05$, we can reject the null statistic, and conclude that we have evidence to support the hypothesis that spiciness of peppers varies by type. <br> 
+
